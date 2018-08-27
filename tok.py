@@ -8,15 +8,15 @@ dot = '.'
 #operators in sql include:
 oper = {'+', '-', '*', '/', '<', '>', '=', '~', '!', '@', '%', '^', '&', '|', '`', '?'}
 key_of_inter = {'into', 'with', 'alter', 'table', 'drop', 'into', 'join', 'from', 'into' }
-keyword_name = {'select', 'insert', 'delete', 'update', 'create', 'drop', 'alter', 'on', 'where', 'group', 'by', 'left', 'right', 'normal', 'outer', 'having', 'order', 'values', 'EOF', '(', 'as'}
+keyword_name = {'select', 'insert', 'delete', 'update', 'create', 'drop', 'alter', 'on', 'where', 'group', 'by', 'left', 'right', 'normal', 'outer', 'having', 'order', 'values', 'EOF', '(', ')', 'as'}
 keyword_identifier = {'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N','O','P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '_' }
 numbers = {'1','2','3','4','5','6','7','8','9','0', '.'}
 number ={1,2,3,4,5,6,7,8,9,0}
-identifier_alphanum = keyword_identifier | {'$','\"'} | numbers 
+identifier_alphanum = keyword_identifier | {'$','\"', '*'} | numbers 
 constant = {'\'', '$',  } #add bitstring
 quoted_identifier = '"'
 
-whitespace = {' ', '\t', '\n'}
+whitespace = {' ', '\t', '\n', '\r', '\r\n'}
 
 class Token:
     def __init__(self,type, value):
@@ -54,9 +54,18 @@ class Tokenize:
     
     def get_number(self):
         num = ''
-        while self.current_char is not None and self.current_char not in whitespace:
+        if self.current_char == '\'':
             num += self.current_char
             self.get_next_char()
+            while self.current_char is not None and self.current_char is not '\'':                            
+                num += self.current_char                
+                self.get_next_char()                
+            num += self.current_char
+            self.get_next_char()
+        else:
+            while self.current_char is not None and self.current_char not in whitespace:
+                num += self.current_char
+                self.get_next_char()
         return num
     
     def get_operator(self):
@@ -68,7 +77,7 @@ class Tokenize:
     
     def get_special_character(self):
         sc = ''
-        while self.current_char in spec_char:
+        while self.current_char is not None and self.current_char in spec_char:
             sc += self.current_char
             self.get_next_char()
         return sc
@@ -97,14 +106,14 @@ class Tokenize:
         return self.token_list
     
     def get_next_token(self):
-                    
-        if self.current_char == None:
-            return Token(EOF, None)
 
         if self.current_char in whitespace:
             self.get_next_non_whitespace()
         
-        if self.current_char in oper:
+        if self.current_char == None:
+            return Token(EOF, None)
+        
+        elif self.current_char in oper:
             op = self.get_operator()
             return Token(OPERATOR, op)
         
@@ -123,8 +132,7 @@ class Tokenize:
             elif word in keyword_name: 
                 return Token(KEYWORD, word)
             else:
-                return Token(IDENTIFIER, word)       
-
+                return Token(IDENTIFIER, word)  
         else:
             self.error()
 
@@ -149,14 +157,14 @@ class Parse:
     def build_expression(self):
         #schema . table . column
         self.in_koi = True
-        print('Start KOI: ', self.current_token.value)
+        # print('Start KOI: ', self.current_token.value)
         ret = []
         while self.current_token.type is not EOF and self.current_token.value not in keyword_name:
             ret.append(self.current_token)              
             self.get_next_token()     
 
         self.in_koi = False
-        print('End KOI: ', self.current_token.value)       
+        # print('End KOI: ', self.current_token.value)       
         self.expression_list.append(ret)
 
     def get_expressions(self):
@@ -180,20 +188,21 @@ def Main():
     while True:
         try:
             text = input('folder location> ')
-            for f in os.scandir(text):
+            for f in os.scandir(text):                
                 with open(f,'r') as fn:
+                    print('\nFILE NAME: ', fn.name, '\n')
                     fnr = fn.read()
                     parse_folder(fnr)
                 
-                    
+            #parse_folder('SELECT A.col1, B.col1, B.col3, C.col1 FROM table1 as "A" LEFT OUTER JOIN table2 as B ON A.col1 = B.col1 INNER JOIN table3 as C ON A.col1 = C.col1 AND B.col1 = C.col1 WHERE col1 = col2')
         except EOFError:
             break
 
 def parse_folder(text):
     tokenize = Tokenize(text)
     lst = tokenize.get_token_list()
-    for t in lst:
-        print(t)
+    # for t in lst:
+    #     print(t)
     parse_it = Parse(lst)
     p_lst = parse_it.get_expressions()
     for u in p_lst:

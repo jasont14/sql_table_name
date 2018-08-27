@@ -1,0 +1,8 @@
+SELECT A.col1, B.col1, B.col3, C.col1
+FROM table1 as "A"
+LEFT OUTER JOIN table2 as B
+ON A.col1 = B.col1
+INNER JOIN table3 as C
+ON A.col1 = C.col1
+AND B.col1 = C.col1
+WHERE col1 = col2

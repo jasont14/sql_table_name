@@ -1,0 +1,18 @@
+with cte1 as (
+SELECT col1, col2
+FROM table1
+)
+
+SELECT cte1.*, b.col1
+		, 
+b.col2		
+FROM 
+			sss.table1 
+
+b
+LEFT OUTER JOIN cte1
+ON cte1.col1 = b.col1
+WHERE b.col1 IN 
+('asdf', 'adsf')
+ORDER BY b.col2 ASC
+
